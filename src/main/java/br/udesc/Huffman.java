@@ -2,7 +2,10 @@ package br.udesc;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
 
 public class Huffman {
@@ -21,10 +24,50 @@ public class Huffman {
             contagem[caracter]++;
         }
 
-        mostrarCodigos(montarArvore(contagem), new StringBuffer());
+        Map<Character, String> map = new HashMap<Character, String>();
+        HTree tree = montarArvore(contagem);
+        gerarMapa(montarArvore(contagem), new StringBuffer(), map);
+        StringBuilder resultado = new StringBuilder();
+        for (Character c : caracteres) {
+            resultado.append(map.get(c));
+        }
+        ObjectOutputStream obt = new ObjectOutputStream(new FileOutputStream(fDestino));
+        obt.writeObject(tree);
+        obt.writeObject(resultado.toString());
     }
 
-    private void descompressFrequencia(File fOrigem, File fDestino) {
+    private void descompressFrequencia(File fOrigem, File fDestino) throws IOException {
+        ObjectInputStream objectInputStream = new ObjectInputStream(new FileInputStream(fOrigem));
+        StringBuilder result = new StringBuilder();
+        try {
+            HTreeNo tree = (HTreeNo) objectInputStream.readObject();
+            String valor = (String) objectInputStream.readObject();
+            char chars[] = valor.toCharArray();
+            for (int i = 0; i < chars.length; i++) {
+                char c = chars[i];
+                HTree folha = tree;
+                while (folha instanceof HTreeNo) {
+                    if (c == '0')
+                        folha = ((HTreeNo)folha).esquerda;
+                    else
+                        folha = ((HTreeNo)folha).direita;
+                    if ((i + 1) < chars.length) {
+                        c = chars[++i];
+                    }
+                }
+                if ((i + 1) < chars.length) {
+                    i--;
+                }
+                result.append(((HTreeFolha)folha).valor);
+            }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        FileWriter fileWriter = new FileWriter(fDestino);
+        fileWriter.append(result.toString());
+        fileWriter.flush();
+        fileWriter.close();
+
     }
 
     public List<Character> leCaracteres(File fOrigem) throws IOException {
@@ -42,37 +85,14 @@ public class Huffman {
         return listaBytes;
     }
 
-    private class Freq implements Serializable, Comparable {
-        int cont;
-        char valor;
-
-        public Freq(int cont, char valor) {
-            this.cont = cont;
-            this.valor = valor;
-        }
-
-
-        public int compareTo(Object o) {
-            if (this == o) {
-                return 0;
-            } else {
-                Freq other = (Freq) o;
-                if (this.cont == other.cont) {
-                    return Character.valueOf(this.valor).compareTo(other.valor);
-                } else {
-                    return this.cont - other.cont;
-                }
-            }
-        }
-    }
-
     public HTree montarArvore(int[] contagem) {
         PriorityQueue<HTree> pQueue = new PriorityQueue<HTree>();
-        for (int i = 0; i < contagem.length; i++)
-            if (contagem[i] > 0)
+        for (int i = 0; i < contagem.length; i++) {
+            if (contagem[i] > 0) {
                 pQueue.offer(new HTreeFolha(contagem[i], (char) i));
+            }
+        }
 
-        assert pQueue.size() > 0;
         while (pQueue.size() > 1) {
             HTree a = pQueue.poll();
             HTree b = pQueue.poll();
@@ -81,20 +101,19 @@ public class Huffman {
         return pQueue.poll();
     }
 
-    public void mostrarCodigos(HTree tree, StringBuffer prefixo) {
+    public void gerarMapa(HTree tree, StringBuffer prefixo, Map<Character, String> map) {
         assert tree != null;
         if (tree instanceof HTreeFolha) {
-            HTreeFolha leaf = (HTreeFolha) tree;
-            System.out.println(leaf.valor + "\t" + leaf.contagem + "\t" + prefixo);
-
+            HTreeFolha folha = (HTreeFolha) tree;
+            map.put(folha.valor, prefixo.toString());
         } else if (tree instanceof HTreeNo) {
             HTreeNo node = (HTreeNo) tree;
             prefixo.append('0');
-            mostrarCodigos(node.esquerda, prefixo);
+            gerarMapa(node.esquerda, prefixo, map);
             prefixo.deleteCharAt(prefixo.length() - 1);
 
             prefixo.append('1');
-            mostrarCodigos(node.direita, prefixo);
+            gerarMapa(node.direita, prefixo, map);
             prefixo.deleteCharAt(prefixo.length() - 1);
         }
     }

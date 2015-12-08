@@ -49,8 +49,4 @@ public class Main {
             }
         }
     }
-
-    private void huffman(FileInputStream fitOrigem, FileOutputStream fitDestino) {
-
-    }
 }
