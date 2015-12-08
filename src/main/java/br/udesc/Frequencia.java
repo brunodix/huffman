@@ -45,7 +45,44 @@ public class Frequencia {
         }
     }
 
-    private void descompressFrequencia(File fitOrigem, File fotDestino) {
+    private void descompressFrequencia(File fOrigem, File fDestino) throws IOException {
+        List<Character> listaResultado = new ArrayList<Character>();
+        List<Character> lista = leCaracteres(fOrigem);
+        Iterator<Character> iterator = lista.iterator();
+        char anterior = iterator.next();
+        while (iterator.hasNext()) {
+            if (Character.isDigit(anterior)) {
+                char proximo = iterator.next();
+                if (proximo == '@') {
+                    proximo = iterator.next();
+                    int cont = Character.getNumericValue(anterior);
+                    for (int i = 0; i < cont; i++ ){
+                        listaResultado.add(proximo);
+                    }
+                } else if (Character.isDigit(proximo)) {
+                    listaResultado.add(anterior);
+                    anterior = proximo;
+                }
+                else {
+                    int cont = Character.getNumericValue(anterior);
+                    for (int i = 0; i < cont; i++ ){
+                        listaResultado.add(proximo);
+                    }
+                    anterior = iterator.next();
+                }
+            } else {
+                listaResultado.add(anterior);
+                anterior = iterator.next();
+            }
+
+        }
+
+        FileWriter fileWriter = new FileWriter(fDestino);
+        for (Character c : listaResultado) {
+            fileWriter.append(c);
+        }
+        fileWriter.flush();
+        fileWriter.close();
 
     }
 
